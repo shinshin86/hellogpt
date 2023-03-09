@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -30,9 +32,6 @@ type chatResponse struct {
 }
 
 func chat(messages []message, apiKey string) []message {
-	// DEBUG
-	// fmt.Println(messages)
-
 	reqBody := chatRequest{
 		Model:    "gpt-3.5-turbo",
 		Messages: messages,
@@ -74,11 +73,31 @@ func chat(messages []message, apiKey string) []message {
 func main() {
 	apiKey := os.Getenv("API_KEY")
 	if apiKey == "" {
-		fmt.Println("API key must be defined as an environment variable.")
+		log.Fatalln("API key must be defined as an environment variable.")
 	}
 
-	messages := []message{}
-	isFirstTime := true
+	filePath := flag.String("c", "", "JSON file path")
+	flag.Parse()
+
+	var messages []message
+	var isFirstTime bool
+
+	if *filePath == "" {
+		isFirstTime = true
+		messages = []message{}
+	} else {
+		isFirstTime = false
+		jsonBytes, err := ioutil.ReadFile(*filePath)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		err = json.Unmarshal(jsonBytes, &messages)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
